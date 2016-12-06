@@ -5,11 +5,15 @@ from collections import defaultdict
 from midiutil.MidiFile import MIDIFile
 
 def is_player_action(e):
-  return isinstance(e,sc2reader.events.PlayerActionEvent)
+  try:
+      f = e.ability_name
+      return True
+  except:
+      return False
 
 def ability2code(x):
   try:
-    return x.ability_code
+    return x.ability_name
   except:
     return str(x.__class__)
 
@@ -30,6 +34,10 @@ class ReplayGenerator:
     self.players_indices = {}
     for i, pid in enumerate(map(lambda x:x.pid, players)):
       self.players_indices[pid-1] = i
+    print self.players_indices
+    self.players_indices[3] = 0
+    self.players_indices[4] = 1
+    print self.players_indices
     
     # notes range for each player
     self.free = [[x for x in xrange(1,50)], [x for x in xrange(51,100)]]
@@ -42,7 +50,7 @@ class ReplayGenerator:
     self.events = events
     self.midi = MIDIFile(2)
 
-  def pid_to_index(self,pid):
+  def pid_to_index(self, pid):
     return self.players_indices[pid]
     
   def generate_note_index(self, pid, code):
@@ -61,6 +69,14 @@ class ReplayGenerator:
   
   def extract_abilities(self):
     abilities = filter(is_player_action, self.events)
+    #return abilities
+    counts = {}
+    for ab in abilities:
+        try:
+            counts[ab.pid] += 1
+        except:
+            counts[ab.pid] = 1
+    print counts
     return filter(lambda x: x.pid in self.players_indices, abilities)
 
   def generate_midi(self):
@@ -87,6 +103,11 @@ class ReplayGenerator:
 
 def replay2midi(filename):
   players, events = load_replay(filename)
+  print players[1].pid
+  names = {}
+  for i in events:
+      names[i.name] = i
+  #from pdb import set_trace; set_trace()
   generator = ReplayGenerator(players, events)
   midi = generator.generate_midi()
   match_name = '_vs_'.join(map(lambda x:x.name, players))
